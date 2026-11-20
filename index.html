@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>余り食品の知らせ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* 配置:スマホで上から順に4つの手順を進む1列。値段は値引きシールに見立てる */
+:root {
+  --bg: #f5f7f2;
+  --surface: #ffffff;
+  --fg: #1d2620;
+  --muted: #56645a;
+  --line: #d5ddd3;
+  --border: #7d8c81;
+  --accent: #2e6a3d;
+  --accent-fg: #ffffff;
+  --sticker: #f2c230;
+  --sticker-fg: #3a2a00;
+  --ok: #2e6a3d;
+  --ng: #b3261e;
+  --warn: #7a5200;
+  --ng-bg: #fdecea;
+  --ok-bg: #e6f2e8;
+  --warn-bg: #fdf3d6;
+  --font: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121714; --surface: #1b221d; --fg: #e5ece6; --muted: #a3b2a7; --line: #334037; --border: #7f9184;
+    --accent: #7fc492; --accent-fg: #0f1a12; --sticker: #e2b726; --sticker-fg: #2a1f00;
+    --ok: #7fc492; --ng: #ff8a80; --warn: #f0c75e; --ng-bg: #3a1f1d; --ok-bg: #1f3325; --warn-bg: #3a3118; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121714; --surface: #1b221d; --fg: #e5ece6; --muted: #a3b2a7; --line: #334037; --border: #7f9184;
+  --accent: #7fc492; --accent-fg: #0f1a12; --sticker: #e2b726; --sticker-fg: #2a1f00;
+  --ok: #7fc492; --ng: #ff8a80; --warn: #f0c75e; --ng-bg: #3a1f1d; --ok-bg: #1f3325; --warn-bg: #3a3118; color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font);
+  font-size: 16px; line-height: 1.7;
+}
+.wrap {
+  max-width: 640px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+  display: grid; gap: 20px;
+}
+header h1 { font-size: 1.5rem; margin: 0; text-wrap: balance; letter-spacing: .02em; }
+header p { margin: 4px 0 0; color: var(--muted); }
+.step {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 16px; display: grid; gap: 12px; min-width: 0;
+}
+.step h2 { font-size: 1.1rem; margin: 0; display: flex; gap: 10px; align-items: center; }
+.step h2 .t { min-width: 0; }
+.num {
+  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-fg);
+  display: grid; place-items: center; font-size: .95rem;
+}
+.hint { margin: 0; color: var(--muted); font-size: .95rem; }
+label { display: grid; gap: 4px; font-weight: 500; }
+label small { font-weight: 400; color: var(--muted); }
+input, select, textarea {
+  font: inherit; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+  min-height: 48px; width: 100%; box-sizing: border-box;
+}
+textarea { min-height: 140px; resize: vertical; }
+textarea::placeholder, input::placeholder { color: var(--muted); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+button, .linkbtn {
+  font: inherit; font-weight: 700; min-height: 48px; padding: 0 18px;
+  border-radius: 24px; border: 1px solid var(--accent); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+}
+.primary { background: var(--accent); color: var(--accent-fg); }
+.secondary { background: transparent; color: var(--accent); }
+button:focus-visible, .linkbtn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--fg); outline-offset: 2px;
+}
+pre.prompt {
+  margin: 0; white-space: pre-wrap; word-break: break-word; font-family: var(--font);
+  font-size: .9rem; background: var(--bg); border: 1px dashed var(--border);
+  border-radius: 8px; padding: 12px; max-height: 220px; overflow: auto;
+}
+.status { margin: 0; font-size: .95rem; min-height: 1.5em; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
+.chip {
+  border: 1px solid var(--line); border-radius: 16px; padding: 4px 12px; font-size: .95rem;
+  max-width: 100%; box-sizing: border-box;
+}
+.sticker {
+  background: var(--sticker); color: var(--sticker-fg); font-weight: 700;
+  border-radius: 50%; width: 92px; height: 92px; padding: 8px;
+  display: grid; place-items: center; text-align: center; line-height: 1.3;
+  transform: rotate(-6deg); box-sizing: border-box; font-size: .95rem; overflow-wrap: anywhere;
+}
+.sticker.long {
+  border-radius: 12px; width: auto; height: auto; max-width: 100%; transform: none; padding: 8px 14px;
+}
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.checks li { padding: 6px 10px; border-radius: 8px; font-size: .95rem; }
+.checks li.ok { background: var(--ok-bg); color: var(--ok); }
+.checks li.ng { background: var(--ng-bg); color: var(--ng); }
+.checks li.warn { background: var(--warn-bg); color: var(--warn); }
+.example {
+  display: inline-block; background: var(--sticker); color: var(--sticker-fg);
+  font-size: .875rem; font-weight: 700; border-radius: 4px; padding: 0 6px; letter-spacing: .05em;
+}
+.count { margin: 0; font-size: .9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+footer { color: var(--muted); font-size: .9rem; }
+@media (prefers-reduced-motion: reduce) { .sticker { transform: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>余り食品の知らせ</h1>
+    <p>写真1枚から、近所の人に送る知らせの文を作ります。写真と文は保存しません。出し手の名前・場所・種類だけ、次に使うときのためにこの端末に覚えます。</p>
+  </header>
+
+  <section class="step" aria-labelledby="h1">
+    <h2 id="h1"><span class="num">1</span>出し手と受け取りの情報</h2>
+    <p class="hint"><span class="example">例</span> 最初は例が入っています。自分の内容に書き換えてください。</p>
+    <div class="row">
+      <label for="kind">出し手の種類
+        <select id="kind">
+          <option>直売所・農家</option>
+          <option>お店</option>
+          <option>漁師・鮮魚店</option>
+          <option>家庭菜園</option>
+        </select>
+      </label>
+      <label for="giver">出し手の名前
+        <input id="giver" value="みどり台直売所" autocomplete="off">
+      </label>
+    </div>
+    <div class="row">
+      <label for="when">受け取りの日時
+        <input id="when" value="今日 17:00〜19:00" autocomplete="off">
+      </label>
+      <label for="where">受け取りの場所
+        <input id="where" value="みどり台直売所の入口" autocomplete="off">
+      </label>
+    </div>
+    <div class="row">
+      <label for="how">受け取り方
+        <select id="how">
+          <option>取りに来てもらう</option>
+          <option>取りに来てもらう。配送も相談できる</option>
+        </select>
+      </label>
+      <label for="price">値段 <small>空なら AI に目安を出してもらう</small>
+        <input id="price" placeholder="例：1本50円" autocomplete="off">
+      </label>
+    </div>
+    <label for="note">ひとこと <small>なくてもよい。消費期限や産地は、ここに自分で書く</small>
+      <input id="note" value="形は曲がっていますが、今朝とれたものです" autocomplete="off">
+    </label>
+  </section>
+
+  <section class="step" aria-labelledby="h2">
+    <h2 id="h2"><span class="num">2</span>AI に写真と指示文を貼る</h2>
+    <p class="hint">指示文をコピーして、ふだん使っている AI（写真を読める物）を開き、余り食品の写真を添えて貼り、送ります。</p>
+    <pre class="prompt" id="prompt"></pre>
+    <div class="btns">
+      <button class="primary" id="copyPrompt" type="button">指示文をコピー</button>
+    </div>
+    <p class="status" id="promptStatus" role="status"></p>
+  </section>
+
+  <section class="step" aria-labelledby="h3">
+    <h2 id="h3"><span class="num">3</span>AI の答えを貼る</h2>
+    <label for="answer">答えの全文 <small>欄の中の薄い字は答えの例です</small>
+      <textarea id="answer"></textarea>
+    </label>
+    <div class="btns">
+      <button class="primary" id="readAnswer" type="button">答えを読み込む</button>
+      <button class="secondary" id="clearAnswer" type="button">答えの欄を空にする</button>
+    </div>
+    <p class="status" id="answerStatus" role="status"></p>
+    <div id="retryBox" hidden>
+      <p class="hint">答えが決まった形になっていません。次の文を AI に送って、書き直してもらってください。</p>
+      <pre class="prompt" id="retryText"></pre>
+      <div class="btns"><button class="secondary" id="copyRetry" type="button">書き直しを頼む文をコピー</button></div>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="h4">
+    <h2 id="h4"><span class="num">4</span><span class="t">知らせの文を直して、LINE に貼る <span class="example" id="exampleMark">例</span></span></h2>
+    <p class="hint" id="exampleHint">いま出ているのは例です。手順3で答えを読み込むと、ここが置き換わります。</p>
+    <div class="facts" id="facts"></div>
+    <label for="notice">知らせの文 <small>自由に直せます</small>
+      <textarea id="notice"></textarea>
+    </label>
+    <p class="count" id="count"></p>
+    <ul class="checks" id="checks" aria-live="polite"></ul>
+    <div class="btns">
+      <button class="primary" id="copyNotice" type="button">直した文をコピー</button>
+    </div>
+    <p class="status" id="noticeStatus" role="status"></p>
+  </section>
+
+  <footer>写真から分からないこと（消費期限・産地・安全）は、AI に書かせず、出し手が確かめて書き足してください。</footer>
+</div>
+
+<script id="logic">
+// 文を組み立てる・読み取る・照らす部分。画面に依存しないので tool/check.mjs から試せる
+const FIELDS = ["品名", "量", "状態", "値段の目安", "知らせ"];
+const NOTICE_MAX = 150;
+// 写真から確かめられない言葉。出し手が「ひとこと」に自分で書いた言葉は除く
+const UNVERIFIABLE = ["消費期限", "賞味期限", "産地", "産直", "国産", "新鮮", "安全", "安心", "無農薬", "有機", "オーガニック", "日持ち", "とれたて", "採れたて", "朝採れ", "朝どれ"];
+
+function buildPrompt(v) {
+  const price = v.price && v.price.trim()
+    ? v.price.trim()
+    : "写真から相場を考え、その半額ほどの目安を出してください";
+  const lines = [
+    "この写真の食品は、まだ食べられるのに余っている物です。近所の人に知らせる短い文を作ってください。",
+    "・出し手：" + v.kind + "（" + v.giver + "）",
+    "・受け取り：" + v.when + "　" + v.where,
+    "・受け取り方：" + v.how,
+    "・値段：" + price,
+  ];
+  if (v.note && v.note.trim()) lines.push("・ひとこと：" + v.note.trim());
+  lines.push(
+    "",
+    "書き方の決まり：",
+    "・状態は、形・傷みなど、写真で見て分かることだけを書く",
+    "・知らせは LINE に貼る文で、" + NOTICE_MAX + "字以内。受け取りの日時・場所・値段を必ず入れる",
+    "・消費期限・産地・「新鮮」「安全」など、写真で確かめられないことは書かない（ひとことにあるものは使ってよい）",
+    "",
+    "次の5つの見出しの形だけで答えてください。見出しの後ろに中身を書き、ほかの文は書かないでください。",
+    "【品名】",
+    "【量】",
+    "【状態】",
+    "【値段の目安】",
+    "【知らせ】"
+  );
+  return lines.join("\n");
+}
+
+const RETRY_TEXT = "前の答えを、次の形だけで書き直してください。【品名】【量】【状態】【値段の目安】【知らせ】の5つの見出しを、この順に1回ずつ、それぞれ行の頭に置き、見出しの後ろに中身を書いてください。";
+
+// 見出しの直後に付いた注意書き（…）・コロン・Markdown の ** を取り除く
+function cleanValue(s) {
+  return s
+    .replace(/\*\*/g, "")
+    .replace(/^[\s:：]*/, "")
+    .replace(/^[（(][^）)]*[）)]\s*/, "")
+    .replace(/^[\s:：]*/, "")
+    .trim();
+}
+
+// 【見出し】で区切って読み取る。5つそろわなければ { error: "missing" }、同じ見出しが2回あれば { error: "dup" }
+function parseAnswer(text) {
+  if (!text || !text.trim()) return { error: "empty" };
+  const out = {};
+  const re = /【(品名|量|状態|値段の目安|知らせ)】([\s\S]*?)(?=【(?:品名|量|状態|値段の目安|知らせ)】|$)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    if (out[m[1]] !== undefined) return { error: "dup" };
+    out[m[1]] = cleanValue(m[2]);
+  }
+  for (const f of FIELDS) {
+    if (!out[f]) return { error: "missing" };
+  }
+  return out;
+}
+
+const toHalf = (s) => (s || "").replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/：/g, ":");
+const squash = (s) => toHalf(s).replace(/\s+/g, "");
+
+// 知らせの文を照らす。state は ok / ng / warn
+function checkNotice(notice, v) {
+  const t = squash(notice);
+  const items = [];
+  const len = [...(notice || "").trim()].length;
+  if (len === 0) {
+    return [{ state: "ng", label: "知らせの文が空です" }];
+  }
+
+  // 日時:1番で入れた日時の数字と日付の言葉が文にあるか
+  const when = squash(v.when);
+  const whenNums = when.match(/\d{1,2}/g) || [];
+  const dayWords = ["今日", "明日", "あす", "本日"].filter((w) => when.includes(w));
+  const firstNum = whenNums[0];
+  const numOk = firstNum ? new RegExp("(^|[^\\d])" + firstNum + "(:|時(?!間))").test(t) : /\d{1,2}(:|時(?!間))/.test(t);
+  const dayOk = dayWords.every((w) => t.includes(w));
+  if (numOk && dayOk) items.push({ state: "ok", label: "受け取りの日時が入っています" });
+  else if (numOk) items.push({ state: "warn", label: "時刻はありますが「" + dayWords.join("・") + "」が入っていません。確かめてください" });
+  else items.push({ state: "ng", label: "受け取りの時刻（" + (firstNum ? firstNum + "時" : "何時か") + "）が入っていません。書き足してください" });
+
+  // 場所:場所そのもの、または出し手の名前を除いた残りが文にあるか（名前だけでは場所とみなさない）
+  const where = squash(v.where);
+  const giver = squash(v.giver);
+  const rest = giver && where.startsWith(giver) ? where.slice(giver.length).replace(/^の/, "") : "";
+  const placeOk = (where && t.includes(where)) || (rest.length >= 2 && t.includes(rest));
+  if (!where) items.push({ state: "warn", label: "手順1の受け取りの場所が空です。場所を入れてください" });
+  else if (placeOk && where.length <= 2) items.push({ state: "warn", label: "場所「" + v.where.trim() + "」が短いので、伝わるか確かめてください" });
+  else if (placeOk) items.push({ state: "ok", label: "受け取りの場所が入っています" });
+  else items.push({ state: "ng", label: "受け取りの場所（" + v.where.trim() + "）が入っていません。書き足してください" });
+
+  // 値段:値段の言葉があるか。手順1で値段を入れたなら、その数字も文にあるか
+  const priceWord = /\d+\s*(円|えん)|[¥￥]\s*\d|無料|タダ|ただで|差し上げ|お代|ご自由/.test(t);
+  const priceNums = squash(v.price).match(/\d+/g) || [];
+  const priceNumOk = priceNums.every((n) => t.includes(n));
+  if (priceWord && priceNumOk) items.push({ state: "ok", label: "値段が入っています" });
+  else if (priceWord) items.push({ state: "warn", label: "手順1の値段（" + v.price.trim() + "）と違う値段に見えます。確かめてください" });
+  else items.push({ state: "ng", label: "値段が入っていません。書き足してください" });
+
+  // 長さ
+  items.push(len <= NOTICE_MAX
+    ? { state: "ok", label: "長さは" + len + "字です" }
+    : { state: "ng", label: NOTICE_MAX + "字を超えています（" + len + "字）。短くしてください" });
+
+  // 写真から確かめられない言葉
+  const own = squash(v.note);
+  const found = UNVERIFIABLE.filter((w) => t.includes(w) && !own.includes(w));
+  if (found.length) items.push({ state: "warn", label: "写真から確かめられない言葉「" + found.join("・") + "」があります。本当か確かめてから送ってください" });
+  else items.push({ state: "ok", label: "写真から確かめられない言葉はありません" });
+
+  return items;
+}
+</script>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const inputs = ["kind", "giver", "when", "where", "how", "price", "note"];
+  const values = () => Object.fromEntries(inputs.map((k) => [k, $(k).value]));
+
+  const EXAMPLE_ANSWER = [
+    "【品名】大根（規格外）",
+    "【量】5本",
+    "【状態】根が曲がっている。表面に目立つ傷みは見えない",
+    "【値段の目安】1本50円",
+    "【知らせ】",
+    "【余り食品】大根5本（規格外）",
+    "形は曲がっていますが、今朝とれたものです。",
+    "1本50円です。",
+    "受け取り：今日 17:00〜19:00 みどり台直売所の入口",
+  ].join("\n");
+
+  // 名前・場所・種類は、次に開いたときのために覚えておく（使えなくても動く）
+  try {
+    const saved = JSON.parse(localStorage.getItem("amari-giver") || "null");
+    if (saved) {
+      if (typeof saved.giver === "string") $("giver").value = saved.giver;
+      if (typeof saved.where === "string") $("where").value = saved.where;
+      if (typeof saved.kind === "string") $("kind").value = saved.kind;
+    }
+  } catch (e) {}
+  const remember = () => {
+    try { localStorage.setItem("amari-giver", JSON.stringify({ giver: $("giver").value, where: $("where").value, kind: $("kind").value })); } catch (e) {}
+  };
+
+  const renderPrompt = () => { $("prompt").textContent = buildPrompt(values()); };
+
+  // コピーできないときは、文を選んだ状態にして手でコピーしてもらう
+  async function copy(text, statusEl, doneMsg, selectEl) {
+    try {
+      await navigator.clipboard.writeText(text);
+      statusEl.textContent = doneMsg;
+    } catch (e) {
+      if (selectEl && selectEl.select) { selectEl.focus(); selectEl.select(); }
+      else if (selectEl) { const r = document.createRange(); r.selectNodeContents(selectEl); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+      statusEl.textContent = "自動でコピーできませんでした。文を選んだ状態にしたので、長押しして「コピー」、またはパソコンなら Ctrl+C でコピーしてください。";
+    }
+  }
+
+  function setExample(on) {
+    $("exampleMark").hidden = !on;
+    $("exampleHint").hidden = !on;
+  }
+
+  function renderFacts(p) {
+    const box = $("facts");
+    box.replaceChildren();
+    if (!p) return;
+    const sticker = document.createElement("span");
+    sticker.className = "sticker" + ([...p["値段の目安"]].length > 8 ? " long" : "");
+    sticker.textContent = p["値段の目安"];
+    box.append(sticker);
+    for (const k of ["品名", "量", "状態"]) {
+      const c = document.createElement("span");
+      c.className = "chip";
+      c.textContent = k + "：" + p[k];
+      box.append(c);
+    }
+  }
+
+  const MARK = { ok: "○ ", ng: "× ", warn: "△ " };
+  function renderChecks() {
+    const notice = $("notice").value;
+    $("count").textContent = [...notice.trim()].length + "/" + NOTICE_MAX + "字";
+    const list = $("checks");
+    list.replaceChildren();
+    for (const c of checkNotice(notice, values())) {
+      const li = document.createElement("li");
+      li.className = c.state;
+      li.textContent = MARK[c.state] + c.label;
+      list.append(li);
+    }
+  }
+
+  function show(p, isExample) {
+    renderFacts(p);
+    $("notice").value = p ? p["知らせ"] : "";
+    setExample(isExample);
+    renderChecks();
+  }
+
+  function readAnswer() {
+    const p = parseAnswer($("answer").value);
+    if (p.error) {
+      // 読めなかったときは、前の文（例を含む）を残さない
+      show(null, false);
+      $("retryBox").hidden = p.error === "empty";
+      $("answerStatus").textContent = {
+        empty: "答えの欄が空です。AI の答えを貼ってください。",
+        dup: "答えが2つ入っているようです。欄を空にしてから、答えを1つだけ貼ってください。",
+        missing: "読み込めませんでした。5つの見出しがそろっていません。",
+      }[p.error];
+      return;
+    }
+    $("retryBox").hidden = true;
+    $("answerStatus").textContent = "読み込みました。手順4で文を直せます。";
+    show(p, false);
+  }
+
+  inputs.forEach((k) => $(k).addEventListener("input", () => { renderPrompt(); renderChecks(); remember(); }));
+  $("copyPrompt").addEventListener("click", () => copy($("prompt").textContent, $("promptStatus"), "コピーしました。AI に写真と一緒に貼ってください。", $("prompt")));
+  $("readAnswer").addEventListener("click", readAnswer);
+  $("clearAnswer").addEventListener("click", () => { $("answer").value = ""; $("answerStatus").textContent = ""; $("answer").focus(); });
+  $("copyRetry").addEventListener("click", () => copy(RETRY_TEXT, $("answerStatus"), "コピーしました。AI に送ってください。", $("retryText")));
+  $("notice").addEventListener("input", renderChecks);
+  $("copyNotice").addEventListener("click", () => {
+    const items = checkNotice($("notice").value, values());
+    const bad = items.filter((c) => c.state !== "ok");
+    let msg = bad.length ? "コピーしました。ただし ×・△ の項目があります。確かめてから貼ってください。" : "コピーしました。LINE に貼ってください。";
+    if (!$("exampleMark").hidden) msg = "コピーしましたが、これは例の文です。手順3で本物の答えを読み込んでください。";
+    copy($("notice").value, $("noticeStatus"), msg, $("notice"));
+  });
+
+  $("retryText").textContent = RETRY_TEXT;
+  $("answer").placeholder = EXAMPLE_ANSWER;
+  renderPrompt();
+  show(parseAnswer(EXAMPLE_ANSWER), true);
+})();
+</script>
+</body>
+</html>
